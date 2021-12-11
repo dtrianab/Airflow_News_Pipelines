@@ -33,7 +33,7 @@ with DAG(
     catchup=True,
 ) as dag:
     # create_newsapi_table in pg DB
-    create_pet_table = PostgresOperator(
+    create_newsapi_table = PostgresOperator(
         task_id="create_newsapi_table",
         postgres_conn_id="my_pg_conn",
         sql="sql/newsapi.sql",
