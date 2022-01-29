@@ -1,6 +1,8 @@
-# Build custome airflow image 
+# How to Build custom airflow image 
 
-
+- Initialize the database
+On all operating systems, you need to run database migrations and create the first user account. To do it, run.
+docker-compose up airflow-init
 
 docker build . -f Dockerfile --tag my-image:0.0.1
 
