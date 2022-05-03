@@ -6,13 +6,24 @@ Based on `Dockerfile` custom image can be pulled from docker repo and commands c
 docker build . -f Dockerfile --tag my-image:0.0.1
 ```
 
+- In order to initialize airflow components:
 ```console
 docker-compose up airflow-init
 ```
 
-to open ssh
+- To run all components of yaml file:
+```console
+docker-compose up -d
 ```
+
+
+- To esecute ssh inside airflow image:
+```console
 docker exec -it 7b93bbaa8417 /bin/bash
 ```
 
+- Network
+```console
+docker network ls
+```
 

@@ -1,7 +1,7 @@
 FROM apache/airflow:2.2.3-python3.8
 RUN pip3 install --upgrade pip
 #RUN pip3 install --no-cache-dir lxml
-#RUN pip3 install newspaper3k
+RUN pip3 install newspaper3k
 #COPY requirements.txt .
 #RUN pip3 install -r requirements.txt
 

@@ -170,7 +170,7 @@ def _transform_to_sql(ti):
         mydict = [data_load['title'][k], data_load['author'][k], data_load['source'][k]['id'],
                 data_load['source'][k]['name'], data_load['description'][k], data_load['content'][k],
                 data_load['pub_date'][k], data_load['url'][k], data_load['photo_url'][k]]
-        values2 = ', '.join("'" + str(x).replace("'", '') + "'" for x in mydict)
+        values2 = ',\n'.join("'" + str(x).replace("'", '') + "'" for x in mydict)
         sql_k = ",( %s )" % (values2)
         sql2=sql2+sql_k
     
