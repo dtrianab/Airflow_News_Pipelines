@@ -13,6 +13,7 @@ import nltk
 import psycopg2
 nltk.downloader.download('vader_lexicon')
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import time
 
 from airflow import DAG
 from airflow.models.connection import Connection
@@ -72,7 +73,8 @@ def _get_news(**kwargs):
         news_table = html.find(id='news-table')
 
         #store in dict as string (String For push to xcom {bs4/tag cant be sent})
-        news_tables[ticker] = str(news_table)    
+        news_tables[ticker] = str(news_table)  
+        time.sleep(0.5)  
     return news_tables
 
 def _process(**kwargs):
@@ -155,7 +157,7 @@ def _transform_sql(**kwargs):
 t1 = PythonOperator(
     task_id='retrieve_news',
     python_callable= _get_news,
-    op_kwargs={'tickers': ['RCL', 'AMZN']},
+    op_kwargs={'tickers': ['RCL', 'NIO', 'FROG', 'MANU', 'SPCE', 'NU', 'IQV']},
     dag=dag,
     )
 t1
