@@ -33,7 +33,7 @@ default_args = {
     'email': ['airflow@example.com'],
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 1,
+    'retries': 3,
     'retry_delay': timedelta(minutes=5),
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
@@ -55,48 +55,55 @@ dag = DAG(
     'finviz_news',
     default_args=default_args,
     description='Retrieve news from finviz_url on ticker and make sentiment analysis',
-    schedule_interval=timedelta(days=1),
+    schedule_interval='@hourly',
 )
 
 def _get_news(**kwargs):
     news_tables = {}
-    ticker = kwargs['ticker']
-    # for extracting data from finviz
-    finviz_url = 'https://finviz.com/quote.ashx?t='
-    url = finviz_url + ticker
-    req = Request(url=url,headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0'}) 
-    response = urlopen(req)    
-    # Read the contents of the file into 'html'
-    html = BeautifulSoup(response)
-    # Find 'news-table' in the Soup and load it into 'news_table'
-    news_table = html.find(id='news-table')
-    kwargs['ti'].xcom_push(key='ticker_news', value=ticker)
-    return str(news_table)
+    for ticker in kwargs['tickers']:
+        # for extracting data from finviz
+        finviz_url = 'https://finviz.com/quote.ashx?t='
+        url = finviz_url + ticker
+        req = Request(url=url,headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0'}) 
+        response = urlopen(req)    
+        # Read the contents of the file into 'html'
+        html = BeautifulSoup(response)
+        # Find 'news-table' in the Soup and load it into 'news_table'
+        news_table = html.find(id='news-table')
+
+        #store in dict as string (String For push to xcom {bs4/tag cant be sent})
+        news_tables[ticker] = str(news_table)    
+    return news_tables
 
 def _process(**kwargs):
-    news_table = BeautifulSoup(kwargs['ti'].xcom_pull(task_ids='retrieve_news', key='return_value'), "html.parser")
-    ticker = kwargs['ti'].xcom_pull(task_ids='retrieve_news', key='ticker_news') 
+    #news_table = BeautifulSoup(kwargs['ti'].xcom_pull(task_ids='retrieve_news', key='return_value'), "html.parser")
+    news_tables = kwargs['ti'].xcom_pull(task_ids='retrieve_news', key='return_value')
+    
     parsed_news = []
-    for x in news_table.findAll('tr'):
-        # read the text from each tr tag into text
-        # get text from a only
-        text = x.a.get_text()
-        # split text in the td tag into a list
-        date_scrape = x.td.text.split()
-        # if the length of 'date_scrape' is 1, load 'time' as the only element
 
-        if len(date_scrape) == 1:
-            time_news = date_scrape[0]
+    for file_name, news_table in news_tables.items():        
+        for x in BeautifulSoup(news_table, "html.parser").findAll('tr'):
+            # read the text from each tr tag into text
+            # get text from a only
+            text = x.a.get_text()
+            # split text in the td tag into a list
+            date_scrape = x.td.text.split()
+            # if the length of 'date_scrape' is 1, load 'time' as the only element
 
-            # else load 'date' as the 1st element and 'time' as the second
-        else:
-            date_news = date_scrape[0]
-            time_news = date_scrape[1]
-        #url
-        url = x.find('a').attrs['href']
+            if len(date_scrape) == 1:
+                time_news = date_scrape[0]
 
-        # Append ticker, date, time and headline as a list to the 'parsed_news' list
-        parsed_news.append([ticker, date_news, time_news, text, url])
+                # else load 'date' as the 1st element and 'time' as the second
+            else:
+                date_news = date_scrape[0]
+                time_news = date_scrape[1]
+            #url
+            url = x.find('a').attrs['href']
+
+            ticker = file_name.split('_')[0]
+
+            # Append ticker, date, time and headline as a list to the 'parsed_news' list
+            parsed_news.append([ticker, date_news, time_news, text, url])
     #print(parsed_news)    
     #print('Processing')
     return parsed_news
@@ -123,6 +130,8 @@ def _sentiment_score(**kwargs):
 def _transform_sql(**kwargs):
     news = pd.read_json( kwargs['ti'].xcom_pull(task_ids='sentiment_score', key='return_value') )
     # keep all new values, drop existing records from news
+    print(news.head())
+    print(news.tail())
     n=0
     k=str(n)
        
@@ -139,13 +148,14 @@ def _transform_sql(**kwargs):
         sql_i = ",(%s)" % (values2)
         sql+=sql_i
     sql+=';'
+    print(sql)
     return sql
 
 
 t1 = PythonOperator(
     task_id='retrieve_news',
     python_callable= _get_news,
-    op_kwargs={'ticker': 'AMZN'},
+    op_kwargs={'tickers': ['RCL', 'AMZN']},
     dag=dag,
     )
 t1
@@ -174,8 +184,7 @@ t4
 t5 = PostgresOperator(
     task_id="delete_tmp_table",
     postgres_conn_id='my_pg_conn',
-    #sql= "DELETE FROM tmp_FinViz;",
-    sql= "TRUNCATE tmp_FinViz RESTART IDENTITY;",
+    sql= "DELETE FROM tmp_FinViz;",
     dag=dag,
     )
 t5   
@@ -192,7 +201,8 @@ t6
 t7 = PostgresOperator(
     task_id="delete_existing_news",
     postgres_conn_id='my_pg_conn',
-    sql= "DELETE FROM tmp_FinViz WHERE url_news IN (SELECT url_news FROM FinViz);"
+    #sql= "DELETE FROM tmp_FinViz WHERE url_news IN (SELECT url_news FROM FinViz);"
+    sql= "DELETE FROM tmp_FinViz USING FinViz WHERE tmp_FinViz.url_news = FinViz.url_news AND tmp_FinViz.ticker = FinViz.ticker;"
     ,
     dag=dag,
     )
