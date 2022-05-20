@@ -2,6 +2,7 @@ FROM apache/airflow:2.3.0-python3.8
 RUN pip3 install --upgrade pip
 #RUN pip3 install --no-cache-dir lxml
 RUN pip3 install newspaper3k
+RUN pip install apache-airflow-providers-amazon
 #COPY requirements.txt .
 #RUN pip3 install -r requirements.txt
 

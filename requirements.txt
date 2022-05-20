@@ -1,11 +1,23 @@
+# News lib
 newspaper3k
+
+# API call/process
 requests
+bs4
+
+# Py 
 pandas
 matplotlib
-#psycopg2
-#t4
+plotly
+
 flask
 nltk
 urllib3
-bs4
-plotly
+
+# AWS
+boto3 
+botocore
+
+#psycopg2
+#t4
+

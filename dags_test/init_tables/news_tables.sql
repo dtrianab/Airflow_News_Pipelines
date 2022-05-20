@@ -4,10 +4,10 @@ CREATE TABLE IF NOT EXISTS newsapi (
     author VARCHAR,
     source_id VARCHAR,
     source_name VARCHAR,
-    description VARCHAR,
+    description_news VARCHAR,
     content VARCHAR,
     pub_date DATE,
-    url VARCHAR,
+    url_news VARCHAR,
     photo_url VARCHAR);
 
 
